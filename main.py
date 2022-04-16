@@ -57,7 +57,28 @@ def make_trajectory(start, end, samples):
         points.append([x, y, z])
     
     return points
+def make_circle(start, samples):
+    '''
+    Parameters
+    ----------
+    start: list
+        start position, `[x, y, z]`.
 
+    samples: int
+        How many point to generate between this two points.
+    
+    Returns
+    ----------
+    list
+        A list of points inside, each element is represent a point as `[x, y, z]`.
+    '''
+    point = []
+    for i in range (samples):
+        x = start[0]*cos(radians(i*360/samples))
+        y = start[1]*sin(radians(i*360/samples))
+        z = start[2]
+        point.append([x, y, z])
+    return point,samples
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='A program to simulate the movement of 3-Dimension Delta robot.')
@@ -77,7 +98,7 @@ if __name__ == '__main__':
                      [ 50, 0, height]]
 
     plt_ik = plt.subplot(111, projection='3d')
-
+    
     for i in range(len(follow_points)*rounds):
         start_point_index = i%len(follow_points)
         start_point = follow_points[start_point_index]
@@ -94,3 +115,14 @@ if __name__ == '__main__':
             dr.plot(plt_ik)
             plt.draw()
             plt.pause(0.01/velocity)
+    move_lists,sample = make_circle([30,30,-223.6], samples = 36)
+    plot_circle = plt.subplot(111, projection='3d')
+    for i in range (sample):
+        plt.cla()
+        dr.inverse_kinematic(G=move_lists[i])
+        dr.plot(plot_circle)
+        plt.draw()
+        plt.pause(0.01/velocity)
+
+
+        
