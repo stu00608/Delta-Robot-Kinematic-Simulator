@@ -1,31 +1,96 @@
+from tracemalloc import start
 import numpy as np
 from math import *
 import matplotlib.pyplot as plt
 from kinematic_model import DeltaRobot
+import argparse
+
+def move(dr, target):
+
+    '''
+    Plot the robot at target point.
+
+    Parameters
+    ----------
+    dr: DeltaRobot
+        The robot object.
+    target: list
+        A 3D position as the target point for G.
+    '''
+
+    plt_ik = plt.subplot(111, projection='3d')
+    dr.inverse_kinematic(G=target)
+    dr.plot(plt_ik)
+    plt.show()
+
+def make_trajectory(start, end, samples):
+
+    '''
+    Parameters
+    ----------
+    start: list
+        start position, `[x, y, z]`.
+    end: list
+        end position, `[x, y, z]`. 
+    samples: int
+        How many point to generate between this two points.
+    
+    Returns
+    ----------
+    list
+        A list of points inside, each element is represent a point as `[x, y, z]`.
+    '''
+
+    diff_x = end[0] - start[0]
+    diff_y = end[1] - start[1]
+    diff_z = end[2] - start[2]
+
+    interval_x = diff_x/(samples+1)
+    interval_y = diff_y/(samples+1)
+    interval_z = diff_z/(samples+1)
+
+    points = []
+    for i in range(1, samples+1):
+        x = start[0] + interval_x*i
+        y = start[1] + interval_y*i
+        z = start[2] + interval_z*i
+        points.append([x, y, z])
+    
+    return points
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='A program to simulate the movement of 3-Dimension Delta robot.')
+    parser.add_argument("-r", "--round", default=1, type=int, help="Round to move in follow_points")
+    parser.add_argument("-v", "--velocity", default=1, type=float, help="Movement velocity.")
+    args = parser.parse_args()
+
+    height = -223.6
     dr = DeltaRobot()
+    dr.inverse_kinematic(G=[0, 0, height])
 
-    point_A = np.array([dr.O[0], dr.O[1]-dr.K, dr.Rh])
-    point_B = np.array([dr.O[0]+dr.K*cos(radians(150)),
-                       dr.O[1]+dr.K*sin(radians(150)), dr.O[2]+dr.Rh])
-    point_C = np.array([dr.O[0]+dr.K*cos(radians(30)),
-                       dr.O[1]+dr.K*cos(radians(30)),  dr.O[2]+dr.Rh])
+    rounds = args.round
+    velocity = args.velocity
+    follow_points = [[ 50,  100, height],
+                     [ -50,  100, height],  
+                     [ -50, 0, height],  
+                     [ 50, 0, height]]
 
-    dr.inverse_kinematic(point_A, point_B, point_C)
+    plt_ik = plt.subplot(111, projection='3d')
 
-    plt_ik = plt.subplot(121, projection='3d')
-    plt_ik.set_title("IK")
-    dr.plot(plt_ik)
+    for i in range(len(follow_points)*rounds):
+        start_point_index = i%len(follow_points)
+        start_point = follow_points[start_point_index]
+        end_point_index = (i+1)%len(follow_points)
+        end_point = follow_points[end_point_index]
 
+        move_list = [start_point]
+        move_list += make_trajectory(start_point, end_point, samples=10)
+        move_list.append(end_point)
 
-    input_angle = np.array([88.74,71.214,10])
-    dr.forward_kinematic(input_angle)
-
-    plt_fk = plt.subplot(122, projection='3d')
-    plt_fk.set_title("FK")
-    dr.plot(plt_fk)
-
-    plt.show()
-
+        for point in move_list:
+            plt.cla()
+            dr.inverse_kinematic(G=point)
+            dr.plot(plt_ik)
+            plt.draw()
+            plt.pause(0.01/velocity)

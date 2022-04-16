@@ -2,6 +2,7 @@ import numpy as np
 import yaml
 from math import *
 import matplotlib.pyplot as plt
+import warnings
 
 class DeltaRobot:
 
@@ -58,13 +59,10 @@ class DeltaRobot:
 
     '''
 
-    def __init__(self, config: str = "params.yaml") -> None:
-        self.load_params(config)
+    def __init__(self, config: str = "params.yaml", **kwargs) -> None:
+        self.load_params(config, kwargs)
 
         # Initialize.
-        self.motor_pose_A = np.array([])
-        self.motor_pose_B = np.array([])
-        self.motor_pose_C = np.array([])
         self.pose_a = np.array([])
         self.pose_b = np.array([])
         self.pose_c = np.array([])
@@ -109,27 +107,62 @@ class DeltaRobot:
         
         '''
 
-    def load_params(self, config: str):
-
-        '''
-        Load the parameters from yaml file.
-        '''
+    def load_params(self, config: str, kwargs: dict):      
 
         params = yaml.safe_load(open(config, 'r'))
-        self.DEBUG = params['debug']
-        self.R = params['R']
-        self.r = params['r']
-        self.M = params['M']
-        self.u = params['u']
-        self.O = np.array(params['O'])
-        self.G = np.array(params['G'])
-        self.Rh = params['Rh']
-        self.Rd = params['Rd']
-        self.rh = params['rh']
-        self.rd = params['rd']
+        try:
+            self.DEBUG = kwargs['debug']
+        except:
+            self.DEBUG = params['debug']
+        try:
+            self.R = kwargs['R']
+        except:
+            self.R = params['R']
+        try:
+            self.r = kwargs['r']
+        except:
+            self.r = params['r']
+        try:
+            self.M = kwargs['M']
+        except:
+            self.M = params['M']
+        try:
+            self.u = kwargs['u']
+        except:
+            self.u = params['u']
+        try:
+            self.O = np.array(kwargs['O'])
+        except:
+            self.O = np.array(params['O'])
+        try:
+            self.G = np.array(kwargs['G'])
+        except:
+            self.G = np.array(params['G'])
+        try:
+            self.Rh = kwargs['Rh']
+        except:
+            self.Rh = params['Rh']
+        try:
+            self.Rd = kwargs['Rd']
+        except:
+            self.Rd = params['Rd']
+        try:
+            self.rh = kwargs['rh']
+        except:
+            self.rh = params['rh']
+        try:
+            self.rd = kwargs['rd']
+        except:
+            self.rd = params['rd']
 
         self.K = sqrt(self.R**2 - (self.R/2)**2) * 1/3 - self.Rd
         self.k = sqrt(self.r**2 - (self.r/2)**2) * 2/3 - self.rd
+
+        self.motor_pose_A = np.array([self.O[0], self.O[1]-self.K, self.Rh])
+        self.motor_pose_B = np.array([self.O[0]+self.K*cos(radians(150)),
+                        self.O[1]+self.K*sin(radians(150)), self.O[2]+self.Rh])
+        self.motor_pose_C = np.array([self.O[0]+self.K*cos(radians(30)),
+                        self.O[1]+self.K*cos(radians(30)),  self.O[2]+self.Rh])
 
     def compute_T(self, theta_A: float, theta_B: float, theta_C: float):
 
@@ -138,7 +171,7 @@ class DeltaRobot:
 
         Returns
         ----------
-        (ndarray, ndarray, ndarray)
+        (np.ndarray, np.ndarray, np.ndarray)
             Tuple of TA, TB, TC position.
         '''
 
@@ -177,8 +210,7 @@ class DeltaRobot:
 
         return theta
 
-    def inverse_kinematic(self, motor_pose_A: np.ndarray, motor_pose_B: np.ndarray,
-                          motor_pose_C: np.ndarray):
+    def inverse_kinematic(self, **kwargs):
         '''
         Calculate inverse kinematic, save data in the object.
 
@@ -188,9 +220,13 @@ class DeltaRobot:
             A tuple of computed theta A, B, C.
         '''
 
-        self.motor_pose_A = motor_pose_A
-        self.motor_pose_B = motor_pose_B
-        self.motor_pose_C = motor_pose_C
+        try:
+            self.G = np.array(kwargs['G'])
+        except:
+            warnings.warn("No G parameter detect, use the default G position from config.", Warning)
+        
+        if self.DEBUG:
+            print("Inverse Kinematic calculating.")
 
         # TODO: Explaination of these three points, should make a better var name.
         self.pose_a = np.array([self.G[0], self.G[1]-self.k, self.G[2]+self.rh])
@@ -200,9 +236,9 @@ class DeltaRobot:
                                 self.G[1]+self.k*sin(radians(30)), self.G[2]+self.rh])
 
         # NOTE: The elbow point.
-        connection_coordinate_A = motor_pose_A - self.pose_a
-        connection_coordinate_B = motor_pose_B - self.pose_b
-        connection_coordinate_C = motor_pose_C - self.pose_c
+        connection_coordinate_A = self.motor_pose_A - self.pose_a
+        connection_coordinate_B = self.motor_pose_B - self.pose_b
+        connection_coordinate_C = self.motor_pose_C - self.pose_c
 
         self.theta_A = self.compute_theta(
             connection_coordinate_A, connection_coordinate_A[1],
