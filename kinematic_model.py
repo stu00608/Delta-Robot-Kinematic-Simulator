@@ -175,10 +175,9 @@ class DeltaRobot:
             Tuple of TA, TB, TC position.
         '''
 
-        self.pose_TA = np.array(
-            [self.motor_pose_A[0],
-             self.motor_pose_A[1] - self.M * cos(theta_A),
-             self.motor_pose_A[2] - self.M * sin(theta_A)])
+        self.pose_TA = np.array([self.motor_pose_A[0],
+                                 self.motor_pose_A[1] - self.M * cos(theta_A),
+                                 self.motor_pose_A[2] - self.M * sin(theta_A)])
         self.pose_TB = np.array([self.motor_pose_B[0] + self.M * cos(radians(150)) * cos(theta_B),
                                  self.motor_pose_B[1] + self.M * sin(radians(150)) * cos(theta_B),
                                  self.motor_pose_B[2] - self.M * sin(theta_B)])
@@ -187,28 +186,6 @@ class DeltaRobot:
                                  self.motor_pose_C[2] - self.M * sin(theta_C)])
 
         return (self.pose_TA, self.pose_TB, self.pose_TC)
-
-    def compute_theta(
-            self, connection_coordinate: np.ndarray, A: float, B: float, isA: bool = False):
-        
-        '''
-        Calculate theta base on elbow point and static parameters.
-
-        Returns
-        ----------
-        float
-            theta value in radians.
-        '''
-
-        # TODO: isA is not a good style, need to figure out why there is a double in B and C.
-        square_dist = (
-            connection_coordinate[0] ** 2 + connection_coordinate[1] ** 2 +
-            connection_coordinate[2] ** 2)
-        isA = 2 if isA else 1
-        theta = asin((-self.u**2 + square_dist + self.M**2) /
-                     (isA*self.M*sqrt(A**2 + B**2))) - atan(B/A)
-
-        return theta
 
     def inverse_kinematic(self, **kwargs):
         '''
@@ -240,15 +217,30 @@ class DeltaRobot:
         connection_coordinate_B = self.motor_pose_B - self.pose_b
         connection_coordinate_C = self.motor_pose_C - self.pose_c
 
-        self.theta_A = self.compute_theta(
-            connection_coordinate_A, connection_coordinate_A[1],
-            connection_coordinate_A[2], isA=True)
-        self.theta_B = self.compute_theta(
-            connection_coordinate_B, -2 * connection_coordinate_B[2],
-            -sqrt(3) * connection_coordinate_B[0] + connection_coordinate_B[1])
-        self.theta_C = self.compute_theta(
-            connection_coordinate_C, -2 * connection_coordinate_C[2],
-            sqrt(3) * connection_coordinate_C[0] + connection_coordinate_C[1])
+        # Calculate theta.
+        square_dist = (
+            connection_coordinate_A[0] ** 2 + connection_coordinate_A[1] ** 2 +
+            connection_coordinate_A[2] ** 2)
+        A = connection_coordinate_A[1]
+        B = connection_coordinate_A[2]
+        self.theta_A = asin((-self.u**2 + square_dist + self.M**2) /
+                     (2*self.M*sqrt(A**2 + B**2))) - atan(B/A)
+
+        square_dist = (
+            connection_coordinate_B[0] ** 2 + connection_coordinate_B[1] ** 2 +
+            connection_coordinate_B[2] ** 2)
+        A = -2*connection_coordinate_B[2]
+        B = -sqrt(3)*connection_coordinate_B[0]+connection_coordinate_B[1]
+        self.theta_B = asin((-self.u**2 + square_dist + self.M**2) /
+                     (self.M*sqrt(A**2 + B**2))) - atan(B/A)
+
+        square_dist = (
+            connection_coordinate_C[0] ** 2 + connection_coordinate_C[1] ** 2 +
+            connection_coordinate_C[2] ** 2)
+        A = -2*connection_coordinate_C[2]
+        B = sqrt(3)*connection_coordinate_C[0]+connection_coordinate_C[1]
+        self.theta_C = asin((-self.u**2 + square_dist + self.M**2) /
+                     (self.M*sqrt(A**2 + B**2))) - atan(B/A)
 
         # TODO: Make a better var name for this, clarify with connect_coordinate point.
         self.compute_T(self.theta_A, self.theta_B, self.theta_C)
