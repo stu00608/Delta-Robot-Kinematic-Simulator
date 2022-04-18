@@ -125,4 +125,4 @@ if __name__ == '__main__':
     dr = DeltaRobot()
     dr.inverse_kinematic(G=[0, 0, height])
 
-    draw_rectangle(dr, [25, 50, height], 100, 100, 1, 1)
+    draw_rectangle(dr, [25, 50, height], 100, 100, args.round, args.velocity)
