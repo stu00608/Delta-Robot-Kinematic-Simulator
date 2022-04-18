@@ -162,7 +162,7 @@ class DeltaRobot:
         self.motor_pose_B = np.array([self.O[0]+self.K*cos(radians(150)),
                         self.O[1]+self.K*sin(radians(150)), self.O[2]+self.Rh])
         self.motor_pose_C = np.array([self.O[0]+self.K*cos(radians(30)),
-                        self.O[1]+self.K*cos(radians(30)),  self.O[2]+self.Rh])
+                        self.O[1]+self.K*sin(radians(30)),  self.O[2]+self.Rh])
 
     def compute_T(self, theta_A: float, theta_B: float, theta_C: float):
 
